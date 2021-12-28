@@ -1,0 +1,57 @@
+version: "2.4"
+
+services:
+    slt:
+        container_name: slt
+        image: slt:latest
+        entrypoint: ["/slt", "/slt.conf"]
+        networks:
+            - common
+        ports:
+            - "<external IP>:8443"
+        volumes:
+            - type: bind
+              source: /var/containers/slt/slt.conf
+              target: /slt.conf
+              read_only: true
+            - type: bind
+              source: /var/containers/slt/acme
+              target: /acme
+    grafana:
+        container_name: grafana
+        image: grafana/grafana:live
+        depends_on:
+            - influx
+        networks:
+            - common
+        ports:
+            - "127.0.0.1:3000:3000"
+        volumes:
+            - type: bind
+              source: /var/containers/grafana/data
+              target: /var/lib/grafana
+            - type: bind
+              source: /var/containers/grafana/log
+              target: /var/log/grafana
+            - type: bind
+              source: /var/containers/grafana/etc
+              target: /etc/grafana
+        user: "472"
+    influx:
+        container_name: influx
+        image: influxdb:alpine-live
+        entrypoint: ["/usr/bin/influxd", "-config", "/etc/influxdb/influxdb.conf"]
+        networks:
+            - common
+        volumes:
+            - type: bind
+              source: /var/containers/influx/influxdb.conf
+              target: /etc/influxdb/influxdb.conf
+              read_only: true
+            - type: bind
+              source: /var/containers/influx/varlib
+              target: /var/lib/influxdb
+
+networks:
+    common:
+        driver: bridge
