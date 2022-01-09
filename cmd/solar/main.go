@@ -64,16 +64,28 @@ func main() {
 
 		tu := solaredge.QuarterOfAnHour
 
-		// retrieve energy production details for the last hour
-		resp, err := client.Site.EnergyDetails(siteID, solaredge.SiteEnergyDetailsRequest{
-			StartTime: solaredge.DateTime{Time: before},
-			EndTime:   solaredge.DateTime{Time: now},
-			TimeUnit:  &tu,
-			Meters: []solaredge.Meter{
-				solaredge.Production,
-			},
-		})
-		fatalif.Error(err, "getting site energy")
+		var resp solaredge.SiteEnergyDetails
+		retrySleep := time.Second
+		for retries := 5; retries > 0; retries-- {
+			// retrieve energy production details for the last hour
+			resp, err = client.Site.EnergyDetails(siteID, solaredge.SiteEnergyDetailsRequest{
+				StartTime: solaredge.DateTime{Time: before},
+				EndTime:   solaredge.DateTime{Time: now},
+				TimeUnit:  &tu,
+				Meters: []solaredge.Meter{
+					solaredge.Production,
+				},
+			})
+			if err != nil {
+				log.Printf("error getting site energy: %s", err.Error())
+				time.Sleep(retrySleep)
+				retrySleep *= 2
+			}
+		}
+		if err != nil {
+			log.Print("retries exceeded getting site energy")
+			continue
+		}
 
 		// tease out the values for Production
 		var meter solaredge.Meters
